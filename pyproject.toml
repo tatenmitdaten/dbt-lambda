@@ -19,8 +19,8 @@ dependencies = [
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
 
-[tool.setuptools.packages.find]
-where = ["."]
+[tool.setuptools]
+packages = ["dbt_lambda"]
 
 [project.optional-dependencies]
 dev = [
