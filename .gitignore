@@ -1,5 +1,6 @@
 .idea
 venv
+pycache
 /src/build/
 /src/*.egg-info/
 /tests/test_dbt_lambda/dbt-project/logs/
