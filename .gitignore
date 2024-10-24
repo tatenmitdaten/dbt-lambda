@@ -1,0 +1,6 @@
+.idea
+venv
+/src/build/
+/src/*.egg-info/
+/tests/test_dbt_lambda/dbt-project/logs/
+/tests/test_dbt_lambda/dbt-project/target/

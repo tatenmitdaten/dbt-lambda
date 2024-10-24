@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dbt-lambda"
+authors = [
+    { name = "Christian Schäfer", email = "christian.schaefer@tatenmitdaten.com" },
+]
+description = "Package for running dbt on AWS Lambda"
+requires-python = ">=3.11"
+dynamic = ["version"]
+
+dependencies = [
+    "dbt-snowflake",
+    "boto3-stubs[s3]",
+]
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[project.optional-dependencies]
+dev = [
+    "boto3",
+    "dbt-duckdb",
+    "pytest",
+    "moto[s3,codecommit]",
+    "types-requests",
+    "mypy",
+    "flake8",
+]

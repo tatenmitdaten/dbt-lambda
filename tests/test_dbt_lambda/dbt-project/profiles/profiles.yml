@@ -1,0 +1,5 @@
+test:
+  outputs:
+    dev:
+      type: duckdb
+  target: dev
