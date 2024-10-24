@@ -18,8 +18,4 @@ check:
 	$(venv_path)/bin/flake8 "src" --ignore=F401,E501
 	$(venv_path)/bin/mypy "src" --python-executable $(venv_path)/bin/python
 
-lock:
-	$(venv_path)/bin/pip-compile --upgrade --strip-extras --build-isolation \
-		--output-file src/requirements.txt src/pyproject.toml
-
 .PHONY: setup venv install lock check
