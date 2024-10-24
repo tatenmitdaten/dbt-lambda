@@ -3,7 +3,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dbt_lambda"
+name = "dbt-lambda"
 authors = [
     { name = "Christian Schäfer", email = "christian.schaefer@tatenmitdaten.com" },
 ]
