@@ -14,10 +14,10 @@ import dbt.mp_context
 from dbt.artifacts.schemas.run import RunExecutionResult
 from dbt_common.events import EventLevel
 
-from .docs import save_index_html
-from .git import copy_dbt_project
-from .secrets import set_github_token_to_env
-from .secrets import set_snowflake_credentials_to_env
+from dbt_lambda.docs import save_index_html
+from dbt_lambda.git import copy_dbt_project
+from dbt_lambda.secrets import set_github_token_to_env
+from dbt_lambda.secrets import set_snowflake_credentials_to_env
 
 logger = getLogger()
 logger.setLevel('INFO')

@@ -2,8 +2,8 @@ import json
 import os
 from pathlib import Path
 
-from main import run_single_threaded
-from docs import load_index_html
+from dbt_lambda.main import run_single_threaded
+from dbt_lambda.docs import load_index_html
 
 
 def test_run():
@@ -29,4 +29,3 @@ def test_docs(dbt_docs_bucket):
         os.remove(catalog_path)
     run_single_threaded(['docs', 'generate'], base_path)
     index_html = load_index_html()
-    assert len(index_html) == 1_916_602

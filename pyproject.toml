@@ -9,7 +9,7 @@ authors = [
 ]
 description = "Package for running dbt on AWS Lambda"
 requires-python = ">=3.11"
-version = "0.1.0"
+dynamic = ["version"]
 
 dependencies = [
     "dbt-snowflake",

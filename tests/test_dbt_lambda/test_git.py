@@ -3,7 +3,7 @@ import shutil
 
 import pytest
 
-from git import copy_dbt_project
+from dbt_lambda.git import copy_dbt_project
 
 
 @pytest.fixture
