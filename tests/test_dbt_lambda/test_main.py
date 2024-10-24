@@ -2,8 +2,8 @@ import json
 import os
 from pathlib import Path
 
-from dbt_lambda.main import run_single_threaded
-from dbt_lambda.docs import load_index_html
+from main import run_single_threaded
+from docs import load_index_html
 
 
 def test_run():

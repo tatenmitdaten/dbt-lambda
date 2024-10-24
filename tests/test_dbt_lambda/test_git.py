@@ -1,10 +1,9 @@
-import os
 import pathlib
 import shutil
 
 import pytest
 
-from dbt_lambda.git import copy_dbt_project
+from git import copy_dbt_project
 
 
 @pytest.fixture
