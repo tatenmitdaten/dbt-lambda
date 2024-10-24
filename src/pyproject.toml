@@ -3,13 +3,13 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dbt-lambda"
+name = "dbt_lambda"
 authors = [
     { name = "Christian Schäfer", email = "christian.schaefer@tatenmitdaten.com" },
 ]
 description = "Package for running dbt on AWS Lambda"
 requires-python = ">=3.11"
-dynamic = ["version"]
+version = "0.1.0"
 
 dependencies = [
     "dbt-snowflake",
