@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import re
 from enum import Enum
 from typing import Annotated
@@ -47,6 +48,8 @@ def cli_exec(
     print(args)
     event = {'args': args}
     if mode == Mode.local:
+        if 'SAM_CONFIG_FILE' not in os.environ:
+            os.environ['SAM_CONFIG_FILE'] = 'src/transform/samconfig.yaml'
         payload = lambda_handler(event, None)
     elif mode == Mode.remote:
         transform_function_name = f'TransformFunction-{env.value}'
