@@ -3,6 +3,7 @@ import logging
 import os
 import re
 from enum import Enum
+from tempfile import TemporaryDirectory
 from typing import Annotated
 
 import boto3
@@ -50,7 +51,9 @@ def cli_exec(
     if mode == Mode.local:
         if 'SAM_CONFIG_FILE' not in os.environ:
             os.environ['SAM_CONFIG_FILE'] = 'src/transform/samconfig.yaml'
-        res = lambda_handler(event, None)
+        with TemporaryDirectory() as tmp_dir:
+            event['base_path'] = tmp_dir.__str__()
+            res = lambda_handler(event, None)
     elif mode == Mode.remote:
         transform_function_name = f'TransformFunction-{env.value}'
 
