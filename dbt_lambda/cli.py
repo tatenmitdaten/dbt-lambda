@@ -50,7 +50,7 @@ def cli_exec(
     if mode == Mode.local:
         if 'SAM_CONFIG_FILE' not in os.environ:
             os.environ['SAM_CONFIG_FILE'] = 'src/transform/samconfig.yaml'
-        payload = lambda_handler(event, None)
+        res = lambda_handler(event, None)
     elif mode == Mode.remote:
         transform_function_name = f'TransformFunction-{env.value}'
 
@@ -65,10 +65,10 @@ def cli_exec(
             FunctionName=transform_function_name,
             Payload=json.dumps(event).encode('utf-8'),
         )
-        payload = json.loads(response['Payload'].read())
+        res = json.loads(response['Payload'].read())
     else:
         raise ValueError(f'Unknown mode: {mode}')
-    print(json.dumps(payload, indent=2))
+    print(res['message'])
 
 
 if __name__ == '__main__':
