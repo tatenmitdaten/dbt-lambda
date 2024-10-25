@@ -14,7 +14,7 @@ def get_parameters(env: str | None = None, file: Path | None = None) -> dict:
         if 'SAM_CONFIG_FILE' in os.environ:
             file = Path(os.environ['SAM_CONFIG_FILE'])
         else:
-            file = Path('/var/task/samconfig.yaml')
+            file = Path('/var/task/transform/samconfig.yaml')
         logger.info(f'Using sam config file "{file.absolute()}"')
     if not file.exists():
         raise FileNotFoundError(f'File "{file}" not found. Cannot read parameters.')
