@@ -16,9 +16,9 @@ dev:
       s3_prefix: transform-dev
       parameter_overrides:
         - Environment=dev
-        - RepositoryName=sandbox-model
         - SnowflakeSecretArn=tbd
         - KMSKeyArn=tbd
+        - DbtRepositoryName=sandbox-model
         - DbtDocsBucketStem=sandbox-dbt-docs
         - DbtDocsAccessToken=tbd
 
@@ -30,8 +30,8 @@ prod:
       s3_prefix: transform-prod
       parameter_overrides:
         - Environment=prod
-        - RepositoryName=sandbox-model
         - SnowflakeSecretArn=tbd
         - KMSKeyArn=tbd
+        - DbtRepositoryName=sandbox-model
         - DbtDocsBucketStem=sandbox-dbt-docs
         - DbtDocsAccessToken=tbd

@@ -29,9 +29,15 @@ def get_parameters(env: str | None = None, file: Path | None = None) -> dict:
 
 def set_env_vars():
     parameters = get_parameters()
-    os.environ['SNOWFLAKE_SECRET_ARN'] = parameters['SnowflakeSecretArn']
-    logger.info(f'Set SNOWFLAKE_SECRET_ARN={parameters["SnowflakeSecretArn"]} environment variable')
-    os.environ['DBT_DOCS_BUCKET'] = parameters['DbtDocsBucketStem'] + '-' + os.environ.get('APP_ENV', 'dev')
+    environ_map = {
+        'GITHUB_SECRET_ARN': 'GithubSecretArn',
+        'CODECOMMIT_ROLE_ARN': 'CodeCommitRoleArn',
+        'SNOWFLAKE_SECRET_ARN': 'SnowflakeSecretArn',
+        'DBT_DOCS_BUCKET_STEM': 'DbtDocsBucketStem',
+        'DBT_REPOSITORY_NAME': 'DbtRepositoryName'
+    }
+    for env_var, param_key in environ_map.items():
+        os.environ[env_var] = parameters.get(param_key, '')
+        logger.info(f'Set {env_var}={os.environ[env_var]} environment variable')
+    os.environ['DBT_DOCS_BUCKET'] = os.environ['DBT_DOCS_BUCKET_STEM'] + '-' + os.environ.get('APP_ENV', 'dev')
     logger.info(f'Set DBT_DOCS_BUCKET={os.environ["DBT_DOCS_BUCKET"]} environment variable')
-    os.environ['DBT_REPOSITORY_NAME'] = parameters['RepositoryName']
-    logger.info(f'Set DBT_REPOSITORY_NAME={os.environ['DBT_REPOSITORY_NAME']} environment variable')

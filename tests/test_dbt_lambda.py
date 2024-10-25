@@ -13,7 +13,7 @@ from dbt_lambda.docs import load_index_html
 from dbt_lambda.main import run_single_threaded
 
 logger = logging.getLogger()
-logger.setLevel(logging.WARN)
+logger.setLevel(logging.INFO)
 logger.addHandler(logging.StreamHandler())
 
 
@@ -70,7 +70,7 @@ def test_run():
 def test_get_parameters(parameters):
     assert parameters['Environment'] == 'dev'
     assert 'profile' in parameters
-    assert 'RepositoryName' in parameters
+    assert 'DbtRepositoryName' in parameters
     assert 'SnowflakeSecretArn' in parameters
     assert 'KMSKeyArn' in parameters
     assert 'DbtDocsBucketStem' in parameters
@@ -79,6 +79,8 @@ def test_get_parameters(parameters):
 
 def test_set_env_vars(env_vars):
     assert 'SNOWFLAKE_SECRET_ARN' in os.environ
+    assert 'GITHUB_SECRET_ARN' in os.environ
+    assert 'CODECOMMIT_ROLE_ARN' in os.environ
     assert 'DBT_DOCS_BUCKET' in os.environ
     assert 'DBT_REPOSITORY_NAME' in os.environ
 
