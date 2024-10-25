@@ -12,6 +12,7 @@ install:
 setup: venv install
 
 test:
+	export SAM_CONFIG_FILE=samconfig.yaml && \
 	$(venv_path)/bin/pytest -W "ignore::DeprecationWarning"
 
 check:

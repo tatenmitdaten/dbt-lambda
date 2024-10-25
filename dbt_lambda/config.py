@@ -17,7 +17,7 @@ def get_parameters(env: str | None = None, file: Path | None = None) -> dict:
             file = Path('/var/task/transform/samconfig.yaml')
         logger.info(f'Using sam config file "{file.absolute()}"')
     if not file.exists():
-        raise FileNotFoundError(f'File "{file}" not found. Cannot read parameters.')
+        raise FileNotFoundError(f'File "{file.absolute()}" not found. Cannot read parameters.')
     env = env or os.environ.get('APP_ENV', 'dev')
     with file.open() as buffer:
         config = yaml.safe_load(buffer)

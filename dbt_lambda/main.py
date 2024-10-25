@@ -88,7 +88,7 @@ class NodeResult:
         del self.node_info['node_relation']['relation_name']
 
     def __str__(self):
-        failures = f'[{self.failures}] ' if self.failures else ''
+        failures = f'[{self.failures}]' if self.failures else ''
         if self.node_info['materialized'] == 'test':
             name = self.node_info['unique_id']
         else:

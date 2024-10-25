@@ -7,7 +7,7 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from app import lambda_handler
+from dbt_lambda.app import lambda_handler
 from dbt_lambda.config import get_parameters
 from dbt_lambda.config import set_env_vars
 from dbt_lambda.docs import load_index_html
@@ -20,7 +20,8 @@ logger.addHandler(logging.StreamHandler())
 
 @pytest.fixture(scope='session')
 def parameters():
-    os.environ['SAM_CONFIG_FILE'] = '../samconfig.yaml'
+    if 'SAM_CONFIG_FILE' not in os.environ:
+        os.environ['SAM_CONFIG_FILE'] = '../samconfig.yaml'
     yield get_parameters('dev')
 
 
@@ -108,7 +109,8 @@ def dbt_result():
                     'unique_id': 'test.test.warning_test'
                 },
                 'status': 'warn'
-            }],
+            },
+        ],
         'success': False
     }
 
@@ -121,17 +123,19 @@ def test_run(dbt_result, base_path):
 
 
 def test_successful_app_run(dbt_result, base_path, env_vars):
-    event = {'args': ['build', '--select', 'test_model'], 'base_path': base_path}
+    event = {'args': ['build', '--select', 'test_model', 'warning_test'], 'base_path': base_path}
     res = lambda_handler(event, None)
 
     # remove execution times
     for node in res['nodes']:
         node['execution_time'] = 0
-    res['message'] = res['message'][:-2]
+    res['message'] = '\n'.join(m[:-2] for m in res['message'].split('\n'))
 
+    del dbt_result['nodes'][1]
     assert res == {
-        'message': 'memory.main.test_model......................................success in 0.0',
-        'nodes': dbt_result['nodes'][:1],
+        'message': 'memory.main.test_model......................................success in 0.0\n'
+                   'test.test.warning_test......................................warn[1] in 0.0',
+        'nodes': dbt_result['nodes'],
         'success': True,
         'statusCode': 200
     }
@@ -150,8 +154,8 @@ def test_failed_app_run(base_path, env_vars):
     for i, node in enumerate(nodes):
         nodes[i] = node[:-2]
     assert nodes == [
-        'test.test.failing_test......................................fail[1]  in 0.0',
-        'test.test.warning_test......................................warn[1]  in 0.0'
+        'test.test.failing_test......................................fail[1] in 0.0',
+        'test.test.warning_test......................................warn[1] in 0.0'
     ]
 
 

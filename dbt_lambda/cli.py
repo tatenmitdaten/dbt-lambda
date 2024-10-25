@@ -47,7 +47,7 @@ def cli_exec(
     if len(args) == 1 and ' ' in args[0]:
         args = [a.strip("'") for a in re.findall(r"(?:[^\s']+|'[^']*')+", args[0])]
     print(args)
-    event = {'args': args}
+    event: dict[str, list[str] | str] = {'args': args}
     if mode == Mode.local:
         if 'SAM_CONFIG_FILE' not in os.environ:
             os.environ['SAM_CONFIG_FILE'] = 'src/transform/samconfig.yaml'
