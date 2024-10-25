@@ -89,7 +89,7 @@ def copy_folder_codecommit(
             filePath=file_path,
             **({'commitSpecifier': ref} if ref else {})
         )
-        print(f"> {file_path}")
+        logger.info(f"> {file_path}")
         abs_path = base_path / file_path
         abs_path.parent.mkdir(exist_ok=True, parents=True)
         with abs_path.open('wb') as f:

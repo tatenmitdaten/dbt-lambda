@@ -15,7 +15,7 @@ test:
 	$(venv_path)/bin/pytest -W "ignore::DeprecationWarning"
 
 check:
-	$(venv_path)/bin/flake8 "src" --ignore=F401,E501
-	$(venv_path)/bin/mypy "src" --python-executable $(venv_path)/bin/python
+	$(venv_path)/bin/flake8 "dbt_lambda" --ignore=E501
+	$(venv_path)/bin/mypy "dbt_lambda" --check-untyped-defs --python-executable $(venv_path)/bin/python
 
 .PHONY: setup venv install lock check

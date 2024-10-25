@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from logging import getLogger
 from pathlib import Path
 
-import boto3  # type: ignore
 # we only import dbt.mp_context and mock dbt.mp_context._MP_CONTEXT before any other dbt imports
 import dbt.mp_context
 from dbt.artifacts.schemas.run import RunExecutionResult

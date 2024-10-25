@@ -27,6 +27,10 @@ dev = [
     "pytest",
     "moto[s3,codecommit]",
     "types-requests",
+    "types-PyYAML",
     "mypy",
     "flake8",
 ]
+
+[project.scripts]
+dbt-lambda = "dbt_lambda.cli:cli"

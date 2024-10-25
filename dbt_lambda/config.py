@@ -17,8 +17,8 @@ def get_parameters(env: str | None = None, file: Path | None = None) -> dict:
     if not file.exists():
         raise FileNotFoundError(f'File "{file}" not found. Cannot read parameters.')
     env = env or os.environ.get('APP_ENV', 'dev')
-    with file.open() as file:
-        config = yaml.safe_load(file)
+    with file.open() as buffer:
+        config = yaml.safe_load(buffer)
     params = config[env]['deploy']['parameters']
     overrides = params['parameter_overrides']
     return {
