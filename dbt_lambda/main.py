@@ -71,20 +71,44 @@ dbt.mp_context._MP_CONTEXT = ThreadedContext()  # type: ignore
 
 @dataclass
 class NodeResult:
-    node: str
+    node_info: dict
     status: str
     execution_time: float
     failures: int | None
 
+    def __post_init__(self):
+        for key in (
+                'meta',
+                'node_status',
+                'node_started_at',
+                'node_finished_at',
+                'resource_type',
+        ):
+            del self.node_info[key]
+        del self.node_info['node_relation']['relation_name']
+
     def __str__(self):
-        failures = f"[{self.failures}] " if self.failures else ""
-        return f'{self.node.ljust(60, ".")}{self.status}{failures} in {self.execution_time:0.2f}s'
+        failures = f'[{self.failures}] ' if self.failures else ''
+        if self.node_info['materialized'] == 'test':
+            name = self.node_info['unique_id']
+        else:
+            name = '{database}.{schema}.{alias}'.format(**self.node_info['node_relation'])
+        return f'{name.ljust(60, ".")}{self.status}{failures} in {self.execution_time:0.2f}s'
 
 
 @dataclass
 class RunnerResult:
     success: bool
     nodes: list[NodeResult]
+
+    def as_dict(self):
+        return {
+            'success': self.success,
+            'nodes': [node.__dict__ for node in self.nodes]
+        }
+
+    def __str__(self):
+        return '\n'.join(str(node) for node in self.nodes)
 
 
 def run_single_threaded(
@@ -162,7 +186,7 @@ def run_single_threaded(
         for node in res.result.results:
             runner_result.nodes.append(
                 NodeResult(
-                    node=node.node.node_info["unique_id"],
+                    node_info=node.node.node_info,
                     status=node.status.lower(),
                     execution_time=node.execution_time,
                     failures=node.failures
