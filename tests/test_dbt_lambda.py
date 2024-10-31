@@ -7,10 +7,10 @@ import boto3
 import pytest
 from moto import mock_aws
 
-from dbt_lambda.app import lambda_handler
+import dbt_lambda.app as app
+import dbt_lambda.docs as docs
 from dbt_lambda.config import get_parameters
 from dbt_lambda.config import set_env_vars
-from dbt_lambda.docs import load_index_html
 from dbt_lambda.main import run_single_threaded
 
 logger = logging.getLogger()
@@ -21,7 +21,7 @@ logger.addHandler(logging.StreamHandler())
 @pytest.fixture(scope='session')
 def parameters():
     if 'SAM_CONFIG_FILE' not in os.environ:
-        os.environ['SAM_CONFIG_FILE'] = '../samconfig.yaml'
+        os.environ['SAM_CONFIG_FILE'] = '../example/transform/samconfig.yaml'
     yield get_parameters('dev')
 
 
@@ -30,7 +30,7 @@ def env_vars(parameters):
     set_env_vars()
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='session')
 def aws_credentials():
     os.environ["AWS_ACCESS_KEY_ID"] = "testing"
     os.environ["AWS_SECRET_ACCESS_KEY"] = "testing"
@@ -39,18 +39,27 @@ def aws_credentials():
     os.environ["AWS_DEFAULT_REGION"] = "eu-central-1"
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='session')
 def mocked_aws(aws_credentials):
     with mock_aws():
         yield
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='session')
 def dbt_docs_bucket(mocked_aws):
     s3 = boto3.client('s3', region_name='eu-central-1')
     bucket_name = 'test-docs-bucket'
     os.environ['DBT_DOCS_BUCKET'] = bucket_name
     s3.create_bucket(Bucket=bucket_name, CreateBucketConfiguration={'LocationConstraint': 'eu-central-1'})
+    return bucket_name
+
+
+@pytest.fixture()
+def dbt_docs(dbt_docs_bucket):
+    base_path = Path(__file__).parent / 'dbt-project'
+    catalog_path = base_path / 'target' / 'catalog.json'
+    catalog_path.unlink(missing_ok=True)
+    run_single_threaded(['docs', 'generate'], base_path)
 
 
 @pytest.fixture
@@ -124,7 +133,7 @@ def test_run(dbt_result, base_path):
 
 def test_successful_app_run(dbt_result, base_path, env_vars):
     event = {'args': ['build', '--select', 'test_model', 'warning_test'], 'base_path': base_path}
-    res = lambda_handler(event, None)
+    res = app.lambda_handler(event, None)
 
     # remove execution times
     for node in res['nodes']:
@@ -144,7 +153,7 @@ def test_successful_app_run(dbt_result, base_path, env_vars):
 def test_failed_app_run(base_path, env_vars):
     event = {'args': ['build'], 'base_path': base_path}
     with pytest.raises(RuntimeError) as e:
-        lambda_handler(event, None)
+        app.lambda_handler(event, None)
     text = 'dbt failure: '
     message = e.value.__str__()
     assert message.startswith(text)
@@ -162,7 +171,7 @@ def test_failed_app_run(base_path, env_vars):
 def test_app_error(base_path, env_vars):
     event = {'args': ['error'], 'base_path': base_path}
     with pytest.raises(RuntimeError) as e:
-        lambda_handler(event, None)
+        app.lambda_handler(event, None)
     message = e.value.__str__()
     assert message == 'Test Error'
 
@@ -185,10 +194,23 @@ def test_set_env_vars(env_vars):
     assert 'DBT_REPOSITORY_NAME' in os.environ
 
 
-def test_docs(dbt_docs_bucket):
-    base_path = Path(__file__).parent / 'dbt-project'
-    catalog_path = base_path / 'target' / 'catalog.json'
-    if catalog_path.exists():
-        os.remove(catalog_path)
-    run_single_threaded(['docs', 'generate'], base_path)
-    load_index_html()
+def test_docs_fails(parameters):
+    event = {
+        'queryStringParameters': {}
+    }
+    assert docs.lambda_handler(event, None) == {
+        'statusCode': 401,
+        'body': 'Unauthorized'
+    }
+
+
+def test_docs_success(parameters, dbt_docs_bucket, dbt_docs, monkeypatch):
+    event = {
+        'queryStringParameters': {
+            'token': parameters['DbtDocsAccessToken']
+        }
+    }
+    monkeypatch.setattr(docs, 'get_dbt_docs_bucket', lambda: boto3.resource('s3').Bucket(dbt_docs_bucket))
+    response = docs.lambda_handler(event, None)
+    assert response['statusCode'] == 200
+    assert response['body'].startswith('<!doctype html><html')

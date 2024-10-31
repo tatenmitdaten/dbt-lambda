@@ -1,6 +1,6 @@
 # Project
 
-The package provides helper functions to run dbt on AWS Lambda. The dbt project is fetched from a Git repository hosted on GitHub or AWS CodeCommit. The package does not include the actual app and samconfig files but only provides reusables helper functions.
+The package provides helper functions to run dbt on AWS Lambda. The dbt project is fetched from a Git repository hosted on GitHub or AWS CodeCommit.
 
 # How to configure
 
@@ -11,4 +11,6 @@ The package provides helper functions to run dbt on AWS Lambda. The dbt project 
 - `CODECOMMIT_ROLE_ARN` - The ARN of the role that has access to the AWS CodeCommit repository if the repository is hosted on AWS CodeCommit. The role is only required if the CodeCommit repository is in a separate AWS account.
 - `SNOWFLAKE_SECRET_ARN` - The ARN of the secret that stores the Snowflake credentials on AWS Secret Manager.
 
-Best practice is to store all parameters in the samconfig.yaml file and ship it with the project. The advantage is that the parameters need to be defined only in one place. The values are used in the sam template when creating the stack. The app can read the values from the samconfig file and set the environment variables.
+Best practice is to store all parameters in the samconfig.yaml file and ship it with the project. Set the `SAM_CONFIG_FILE` environment variable to the path of the samconfig file. The app reads the parameters from the samconfig file and sets the environment variables listed above. See the example in the `example` directory.
+
+The advantage of reading the parameters directly from the samconfig.yaml is that we need define them only in one place. We can also use the same samconfig file to set the parameters in the `template.yaml` to deploy the app.

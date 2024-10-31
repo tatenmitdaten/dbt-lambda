@@ -12,11 +12,15 @@ install:
 setup: venv install
 
 test:
-	export SAM_CONFIG_FILE=samconfig.yaml && \
+	export SAM_CONFIG_FILE=example/transform/samconfig.yaml && \
 	$(venv_path)/bin/pytest -W "ignore::DeprecationWarning"
 
 check:
 	$(venv_path)/bin/flake8 "dbt_lambda" --ignore=E501
 	$(venv_path)/bin/mypy "dbt_lambda" --check-untyped-defs --python-executable $(venv_path)/bin/python
 
-.PHONY: setup venv install lock check
+lock:
+	$(venv_path)/bin/pip-compile --upgrade --strip-extras --build-isolation \
+		--output-file example/transform-layer/requirements.txt example/transform-layer/requirements.in
+
+.PHONY: setup venv install test check lock

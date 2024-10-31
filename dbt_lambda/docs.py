@@ -7,6 +7,9 @@ import boto3
 from botocore.exceptions import ClientError
 from mypy_boto3_s3.service_resource import Bucket
 
+from dbt_lambda.config import set_env_vars
+from dbt_lambda.config import get_parameters
+
 logger = logging.getLogger()
 logger.setLevel("INFO")
 
@@ -59,3 +62,27 @@ def load_index_html(key: str = 'index.html') -> str:
     body = stream.getvalue()
     logger.info(f'Loaded {len(body)} bytes from s3://{bucket.name}/{key}')
     return body.decode('utf-8')
+
+
+def lambda_handler(event, context):
+    set_env_vars()
+    logger.info(event)
+    query_params = event.get('queryStringParameters') or {}
+    token = get_parameters().get('DbtDocsAccessToken')
+    if query_params.get('token') != token:
+        return {
+            'statusCode': 401,
+            'body': 'Unauthorized'
+        }
+
+    bucket = get_dbt_docs_bucket()
+    stream = io.BytesIO()
+    bucket.download_fileobj('index.html', stream)
+    body = stream.getvalue().decode('utf-8')
+    return {
+        'statusCode': 200,
+        "headers": {
+            "Content-Type": "text/html"
+        },
+        'body': body
+    }

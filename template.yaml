@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: 2010-09-09
+Transform: AWS::Serverless-2016-10-31
+Description: Serverless dbt execution and static dbt documentation hosting
+
+Parameters:
+  Environment:
+    Type: String
+    Description: The environment to deploy to. All resources will be suffixed with this value.
+    Default: dev
+    AllowedValues:
+      - dev
+      - prod
+  DbtRepositoryName:
+    Type: String
+    Description: The name of the dbt Git repository to fetch and run.
+  DbtDocsBucketStem:
+    Type: String
+    Description: The stem of the S3 bucket to host the dbt documentation.
+  DbtDocsAccessToken:
+    Type: String
+    Description: The access token to secure the dbt documentation.
+  KMSKeyArn:
+    Type: String
+    Description: The ARN of the KMS key to decrypt secrets.
+  SnowflakeSecretArn:
+    Type: String
+    Description: The ARN of the Secrets Manager secret containing the Snowflake credentials.
+  CodeCommitRoleArn:
+    Type: String
+    Description: The ARN of the IAM role to assume when fetching the dbt repository from CodeCommit in a different AWS account.
+  GithubSecretArn:
+    Type: String
+    Description: The ARN of the Secrets Manager secret containing the GitHub access token.
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Environment:
+      Variables:
+        APP_ENV: !Ref Environment
+
+Resources:
+  TransformLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: src/transform-layer
+    Metadata:
+      BuildMethod: python3.12
+
+  TransformFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub TransformFunction-${Environment}
+      Timeout: 600
+      MemorySize: 384
+      CodeUri: src
+      Handler: transform.app.lambda_handler
+      Layers:
+        - !Ref TransformLayer
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Sub ${DbtDocsBucketStem}-${Environment}
+        # The following policy is an example and needs to be customized for your use case
+        - Version: 2012-10-17
+          Statement:
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref SnowflakeSecretArn
+            - Effect: Allow
+              Action: kms:Decrypt
+              Resource: !Ref KMSKeyArn
+            - Effect: Allow
+              Action: secretsmanager:GetSecretValue
+              Resource: !Ref GithubSecretArn
+
+  DbtDocsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${DbtDocsBucketStem}-${Environment}
+
+  DbtDocsApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Environment
+
+  DbtDocsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub DbtDocsFunction-${Environment}
+      Timeout: 10
+      CodeUri: src
+      Handler: transform.docs.lambda_handler
+      Layers:
+        - !Ref TransformLayer
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Sub ${DbtDocsBucketStem}-${Environment}
+      Events:
+        GetDocs:
+          Type: Api
+          Properties:
+            Path: /
+            RequestParameters:
+              - method.request.querystring.token:
+                  Required: true
+              - method.request.querystring.commit
+            Method: get
+            RestApiId:
+              Ref: DbtDocsApi
+
+Outputs:
+  DbtFunctionArn:
+    Value: !GetAtt TransformFunction.Arn
+    Export:
+      Name: !Sub ${AWS::StackName}-TransformFunctionArn
+  DbtDocsUrl:
+    Value: !Sub "https://${DbtDocsApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/?token=${DbtDocsAccessToken}"
