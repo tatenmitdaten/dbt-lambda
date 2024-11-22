@@ -50,7 +50,7 @@ def copy_folder_github(
 def copy_folder_codecommit(
         base_path: Path,
         repository_name: str,
-        ref: str = 'master',
+        ref: str,
         role_arn: str | None = None,
 ):
     ignore = {'.gitignore', 'Makefile', 'make-venv.bat', '.DS_Store', 'README.md', 'docs.py', 'requirements.txt'}
@@ -102,12 +102,13 @@ def copy_folder_codecommit(
 def copy_dbt_project(
         base_path: Path,
         repository_name: str | None = None,
-        ref: str = 'master',
+        ref: str | None = None,
 ):
+    ref = ref or os.environ.get('DBT_REPOSITORY_BRANCH', 'master')
     repository_name = repository_name or os.environ.get('DBT_REPOSITORY_NAME')
     if repository_name is None:
         raise ValueError('DBT_REPOSITORY_NAME environment variable is not set')
-    logger.info(f'Copy project from "{repository_name}" at {"HEAD" if ref is None else ref}')
+    logger.info(f'Copy project from "{repository_name}" at {ref}')
     shutil.rmtree(base_path, ignore_errors=True)
     base_path.mkdir()
 

@@ -1,3 +1,4 @@
+import json
 import multiprocessing.dummy
 import os
 import queue
@@ -87,6 +88,14 @@ class NodeResult:
             del self.node_info[key]
         del self.node_info['node_relation']['relation_name']
 
+    @property
+    def as_dict(self):
+        return self.__dict__
+
+    @property
+    def as_str(self) -> str:
+        return self.__str__()
+
     def __str__(self):
         failures = f'[{self.failures}]' if self.failures else ''
         if self.node_info['materialized'] == 'test':
@@ -101,14 +110,36 @@ class RunnerResult:
     success: bool
     nodes: list[NodeResult]
 
+    @property
     def as_dict(self):
         return {
             'success': self.success,
-            'nodes': [node.__dict__ for node in self.nodes]
+            'nodes': [node.as_dict for node in self.nodes]
         }
 
+    @property
+    def as_json(self) -> str:
+        return json.dumps(self.as_dict, default=str)
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        return {
+            'success': data['success'],
+            'nodes': [NodeResult(**node) for node in data['nodes']]
+        }
+
+    @property
+    def as_str(self) -> str:
+        return self.__str__()
+
     def __str__(self):
-        return '\n'.join(str(node) for node in self.nodes)
+        return '\n'.join(node.as_str for node in self.nodes)
+
+    def failed(self) -> 'RunnerResult':
+        return RunnerResult(
+            success=self.success,
+            nodes=[node for node in self.nodes if node.status != 'success']
+        )
 
 
 def run_single_threaded(
