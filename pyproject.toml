@@ -14,15 +14,12 @@ dynamic = ["version"]
 dependencies = [
     "dbt-snowflake==1.8.4",
     "boto3-stubs[s3]",
-    "typer",
 ]
-
-[tool.setuptools]
-packages = ["dbt_lambda"]
 
 [project.optional-dependencies]
 dev = [
     "boto3",
+    "typer",
     "dbt-duckdb",
     "pytest",
     "moto[s3,codecommit]",
@@ -31,6 +28,16 @@ dev = [
     "mypy",
     "flake8",
 ]
+cli = [
+    "boto3",
+    "typer",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.distutils.egg_info]
+egg_base = "."
 
 [project.scripts]
 dbt-lambda = "dbt_lambda.cli:cli"

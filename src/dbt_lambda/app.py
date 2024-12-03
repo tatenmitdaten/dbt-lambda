@@ -50,5 +50,5 @@ def lambda_handler(event, context):
     return {
         'statusCode': 200,
         'message': res.as_str,
-        'nodes': res.nodes,
+        **res.as_dict
     }

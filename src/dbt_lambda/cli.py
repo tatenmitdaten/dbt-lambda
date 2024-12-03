@@ -47,7 +47,7 @@ def cli_exec(
     event: dict[str, list[str] | str] = {'args': args}
     if mode == 'local':
         if 'SAM_CONFIG_FILE' not in os.environ:
-            os.environ['SAM_CONFIG_FILE'] = 'src/transform/samconfig.yaml'
+            os.environ['SAM_CONFIG_FILE'] = 'src/samconfig.yaml'
         with TemporaryDirectory() as tmp_dir:
             event['base_path'] = tmp_dir.__str__()
             res = lambda_handler(event, None)
