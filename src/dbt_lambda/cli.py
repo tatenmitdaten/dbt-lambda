@@ -67,7 +67,10 @@ def cli_exec(
         res = json.loads(response['Payload'].read())
     else:
         raise ValueError(f'Unknown mode: {mode}')
-    print(res['message'])
+    if 'message' in res:
+        print(res['message'])
+    else:
+        print(res)
 
 
 if __name__ == '__main__':
