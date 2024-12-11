@@ -138,7 +138,7 @@ class RunnerResult:
     def failed(self) -> 'RunnerResult':
         return RunnerResult(
             success=self.success,
-            nodes=[node for node in self.nodes if node.status != 'success']
+            nodes=[node for node in self.nodes if node.status not in ('success', 'pass')]
         )
 
 
