@@ -38,7 +38,8 @@ def lambda_handler(event, context):
         case ['x-skip']:
             return {
                 'statusCode': 200,
-                'message': 'Skip dbt execution'
+                'message': 'Skip dbt execution',
+                'nodes': []
             }
 
     base_path = event.get('base_path', '/tmp/dbt')
