@@ -35,6 +35,11 @@ def lambda_handler(event, context):
             os.environ['FAIL_ON_ERROR'] = 'True'
             os.environ['DBT_REPOSITORY_BRANCH'] = 'test'
             args = ['build']
+        case ['x-skip']:
+            return {
+                'statusCode': 200,
+                'message': 'Skip dbt execution'
+            }
 
     base_path = event.get('base_path', '/tmp/dbt')
     res: RunnerResult = run_single_threaded(args, base_path)
