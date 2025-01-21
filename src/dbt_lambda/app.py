@@ -1,6 +1,6 @@
-import json
 import os
 from typing import Any
+
 from dbt_lambda.config import set_env_vars
 from dbt_lambda.git import copy_from_repo
 from dbt_lambda.git import default_base_path
@@ -21,7 +21,7 @@ def notify_hook(response: payload) -> str | None:
     return None
 
 
-def lambda_handler(event, context) -> payload:
+def lambda_handler(event, _) -> payload:
     set_env_vars()
     args = event.get('args', [])
     if len(args) == 0:

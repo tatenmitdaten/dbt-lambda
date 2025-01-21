@@ -6,7 +6,7 @@ import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-from logging import getLogger
+import logging
 from pathlib import Path
 
 # we only import dbt.mp_context and mock dbt.mp_context._MP_CONTEXT before any other dbt imports
@@ -20,8 +20,9 @@ from dbt_lambda.git import copy_from_s3
 from dbt_lambda.git import default_base_path
 from dbt_lambda.secrets import set_snowflake_credentials_to_env
 
-logger = getLogger()
+logger = logging.getLogger()
 logger.setLevel('INFO')
+logging.getLogger('snowflake.connector').setLevel(logging.WARNING)
 
 
 class CustomThreadPool:
@@ -178,9 +179,7 @@ def run_single_threaded(
     from dbt.cli.main import dbtRunner, dbtRunnerResult
 
     os.environ['DBT_SEND_ANONYMOUS_USAGE_STATS'] = 'False'
-
     base_path = Path(base_path).absolute()
-    project_file = base_path / 'dbt_project.yml'
 
     # Copy the project from the source
     if source == 'repo':

@@ -1,5 +1,6 @@
 import logging
 import os
+import subprocess
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -251,6 +252,15 @@ def test_docs_success(parameters, dbt_docs_bucket, dbt_docs, monkeypatch):
     response = docs.lambda_handler(event, None)
     assert response['statusCode'] == 200
     assert response['body'].startswith('<!doctype html>')
+
+
+def test_index_html(dbt_docs):
+    index = docs.save_index_html()
+    base_path = Path(__file__).parent / 'dbt-project'
+    index_path = base_path / 'target' / 'docs' / 'index.html'
+    index_path.parent.mkdir(parents=True, exist_ok=True)
+    with index_path.open('w') as f:
+        f.write(index)
 
 
 def test_notify_hook(base_path, snowflake_credentials, env_vars):

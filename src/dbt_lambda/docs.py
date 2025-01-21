@@ -21,7 +21,7 @@ def get_dbt_docs_bucket() -> Bucket:
     return boto3.resource('s3').Bucket(dbt_docs_bucket_name)
 
 
-def save_index_html(base_path: Path | None = None):
+def save_index_html(base_path: Path | None = None) -> str:
     if base_path is None:
         project_dir = os.environ.get('DBT_PROJECT_DIR')
         if project_dir is None:
@@ -34,7 +34,7 @@ def save_index_html(base_path: Path | None = None):
         json_manifest = f.read()
     with (target / 'catalog.json').open() as f:
         json_catalog = f.read()
-    reference_catalog = 'n=[o("manifest","manifest.json"+t),o("catalog","catalog.json"+t)]'
+    reference_catalog = 'n = [o("manifest", "manifest.json" + t), o("catalog", "catalog.json" + t)]'
     embedded_catalog = f"""n=[
     {{label: 'manifest', data: {json_manifest}}},
     {{label: 'catalog', data: {json_catalog}}}
@@ -46,6 +46,7 @@ def save_index_html(base_path: Path | None = None):
     key = 'index.html'
     bucket.put_object(Body=body, Key=key)
     logger.info(f'Written {len(body)} bytes to s3://{bucket.name}/{key}')
+    return index
 
 
 def load_index_html(key: str = 'index.html') -> str:
@@ -64,7 +65,7 @@ def load_index_html(key: str = 'index.html') -> str:
     return body.decode('utf-8')
 
 
-def lambda_handler(event, context):
+def lambda_handler(event, _):
     set_env_vars()
     logger.info(event)
     query_params = event.get('queryStringParameters') or {}
