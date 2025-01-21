@@ -137,24 +137,44 @@ def copy_folder_codecommit(
 
 
 def copy_to_s3(base_path: Path = default_base_path):
-    prefix = base_path.name
     bucket = get_dbt_docs_bucket()
-    bucket.objects.filter(Prefix=prefix).delete()
-    for file in base_path.glob('**/*'):
-        if file.is_file():
-            key = file.relative_to(base_path.parent).as_posix()
-            with file.open('rb') as f:
-                bucket.put_object(Body=f, Key=key)
-                logger.info(f'Written {file} to s3://{bucket.name}/{key}')
+    bucket.Object('dbt-project.zip').delete()
+
+    # Create zip file in memory
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, _, files in os.walk(base_path):
+            for file in files:
+                file_path = Path(root) / file
+                zipf.write(file_path, file_path.relative_to(base_path.parent))
+
+    # Reset buffer position to start
+    zip_buffer.seek(0)
+
+    # Upload directly from memory
+    bucket.upload_fileobj(zip_buffer, 'dbt-project.zip')
+    logger.info(f'Zipped and uploaded {base_path} to s3://{bucket.name}/dbt-project.zip')
 
 
 def copy_from_s3(base_path: Path = default_base_path):
-    prefix = base_path.name
     bucket = get_dbt_docs_bucket()
-    for obj_summary in bucket.objects.filter(Prefix=prefix):
-        obj = bucket.Object(obj_summary.key)
-        file = base_path.parent / obj.key
-        file.parent.mkdir(parents=True, exist_ok=True)
-        with file.open('wb') as f:
-            obj.download_fileobj(f)
-        logger.info(f'Copied from s3://{bucket.name}/{obj.key} to {file}')
+
+    # Download zip file into memory
+    zip_buffer = io.BytesIO()
+    try:
+        bucket.download_fileobj('dbt-project.zip', zip_buffer)
+    except bucket.meta.client.exceptions.ClientError as e:
+        logger.error(f'Failed to download dbt-project.zip from S3: {str(e)}')
+        raise
+
+    # Reset buffer position to start
+    zip_buffer.seek(0)
+
+    # Create base directory if it doesn't exist
+    base_path.mkdir(parents=True, exist_ok=True)
+
+    # Extract all files from zip
+    with zipfile.ZipFile(zip_buffer) as zipf:
+        zipf.extractall(base_path.parent)
+
+    logger.info(f'Downloaded and extracted dbt-project.zip to {base_path}')
