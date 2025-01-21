@@ -10,8 +10,45 @@ from tempfile import TemporaryDirectory
 import boto3
 import requests
 
+from dbt_lambda.docs import get_dbt_docs_bucket
+from dbt_lambda.secrets import set_github_token_to_env
+
 logger = getLogger()
 logger.setLevel('INFO')
+
+default_base_path = Path('/tmp/dbt-project')
+
+
+def copy_from_repo(
+        base_path: Path = default_base_path,
+        repository_name: str | None = None,
+        ref: str | None = None,
+        upload_to_s3: bool = True,
+) -> dict:
+    set_github_token_to_env()
+
+    ref = ref or os.environ.get('DBT_REPOSITORY_BRANCH', 'master')
+    repository_name = repository_name or os.environ.get('DBT_REPOSITORY_NAME')
+    if repository_name is None:
+        raise ValueError('DBT_REPOSITORY_NAME environment variable is not set')
+
+    shutil.rmtree(base_path, ignore_errors=True)
+    base_path.mkdir()
+
+    if os.environ.get('GITHUB_ACCESS_TOKEN'):
+        copy_folder_github(base_path, repository_name=repository_name, ref=ref)
+    else:
+        role_arn = os.environ.get('CODECOMMIT_ROLE_ARN')
+        models_path = base_path / 'models'
+        models_path.mkdir()
+        copy_folder_codecommit(base_path, repository_name=repository_name, ref=ref, role_arn=role_arn)
+
+    if upload_to_s3:
+        copy_to_s3(base_path)
+
+    message = f'Copied project from "{repository_name}" at {ref}'
+    logger.info(message)
+    return {'message': message}
 
 
 def copy_folder_github(
@@ -99,23 +136,25 @@ def copy_folder_codecommit(
         executor.map(download_file, get_files())
 
 
-def copy_dbt_project(
-        base_path: Path,
-        repository_name: str | None = None,
-        ref: str | None = None,
-):
-    ref = ref or os.environ.get('DBT_REPOSITORY_BRANCH', 'master')
-    repository_name = repository_name or os.environ.get('DBT_REPOSITORY_NAME')
-    if repository_name is None:
-        raise ValueError('DBT_REPOSITORY_NAME environment variable is not set')
-    logger.info(f'Copy project from "{repository_name}" at {ref}')
-    shutil.rmtree(base_path, ignore_errors=True)
-    base_path.mkdir()
+def copy_to_s3(base_path: Path = default_base_path):
+    prefix = base_path.name
+    bucket = get_dbt_docs_bucket()
+    bucket.objects.filter(Prefix=prefix).delete()
+    for file in base_path.glob('**/*'):
+        if file.is_file():
+            key = file.relative_to(base_path.parent).as_posix()
+            with file.open('rb') as f:
+                bucket.put_object(Body=f, Key=key)
+                logger.info(f'Written {file} to s3://{bucket.name}/{key}')
 
-    if os.environ.get('GITHUB_ACCESS_TOKEN'):
-        copy_folder_github(base_path, repository_name=repository_name, ref=ref)
-    else:
-        role_arn = os.environ.get('CODECOMMIT_ROLE_ARN')
-        models_path = base_path / 'models'
-        models_path.mkdir()
-        copy_folder_codecommit(base_path, repository_name=repository_name, ref=ref, role_arn=role_arn)
+
+def copy_from_s3(base_path: Path = default_base_path):
+    prefix = base_path.name
+    bucket = get_dbt_docs_bucket()
+    for obj_summary in bucket.objects.filter(Prefix=prefix):
+        obj = bucket.Object(obj_summary.key)
+        file = base_path.parent / obj.key
+        file.parent.mkdir(parents=True, exist_ok=True)
+        with file.open('wb') as f:
+            obj.download_fileobj(f)
+        logger.info(f'Copied from s3://{bucket.name}/{obj.key} to {file}')

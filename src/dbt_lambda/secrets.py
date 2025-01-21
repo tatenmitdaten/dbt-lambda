@@ -59,7 +59,7 @@ def set_github_token_to_env(secret_id: str | None = None):
         raise ValueError('GITHUB_SECRET_ARN environment variable is not set')
     if secret_id == '':
         logger.info('GITHUB_SECRET_ARN is empty, skipping GitHub token setting')
-        return
-    token = get_secret(secret_id)['token']
-    os.environ['GITHUB_ACCESS_TOKEN'] = token
-    logger.info('Set GITHUB_ACCESS_TOKEN=*** environment variable')
+    else:
+        token = get_secret(secret_id)['token']
+        os.environ['GITHUB_ACCESS_TOKEN'] = token
+        logger.info('Set GITHUB_ACCESS_TOKEN=*** environment variable')

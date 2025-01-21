@@ -15,8 +15,9 @@ from dbt.artifacts.schemas.run import RunExecutionResult
 from dbt_common.events import EventLevel
 
 from dbt_lambda.docs import save_index_html
-from dbt_lambda.git import copy_dbt_project
-from dbt_lambda.secrets import set_github_token_to_env
+from dbt_lambda.git import copy_from_repo
+from dbt_lambda.git import copy_from_s3
+from dbt_lambda.git import default_base_path
 from dbt_lambda.secrets import set_snowflake_credentials_to_env
 
 logger = getLogger()
@@ -85,8 +86,11 @@ class NodeResult:
                 'node_finished_at',
                 'resource_type',
         ):
-            del self.node_info[key]
-        del self.node_info['node_relation']['relation_name']
+            if key in self.node_info:
+                del self.node_info[key]
+        if 'node_relation' in self.node_info:
+            if 'relation_name' in self.node_info['node_relation']:
+                del self.node_info['node_relation']['relation_name']
 
     @property
     def as_dict(self):
@@ -123,10 +127,10 @@ class RunnerResult:
 
     @classmethod
     def from_dict(cls, data: dict):
-        return {
-            'success': data['success'],
-            'nodes': [NodeResult(**node) for node in data['nodes']]
-        }
+        return cls(
+            success=data['success'],
+            nodes=[NodeResult(**node) for node in data['nodes']]
+        )
 
     @property
     def as_str(self) -> str:
@@ -144,13 +148,15 @@ class RunnerResult:
 
 def run_single_threaded(
         args: list[str],
-        base_path: Path | str = '/tmp/dbt'
+        source: str = 'repo',
+        base_path: Path | str = default_base_path
 ) -> RunnerResult:
     """
     Run dbt with the given arguments in a single-threaded context.
 
     Args:
         args: The dbt arguments to run.
+        source: The source of the dbt project. Either 'repo' or 's3'.
         base_path: The base path of the dbt project.
 
     Returns:
@@ -175,12 +181,14 @@ def run_single_threaded(
 
     base_path = Path(base_path).absolute()
     project_file = base_path / 'dbt_project.yml'
-    is_test_run = project_file.exists() and 'name: test' in project_file.read_text().splitlines()
 
-    # Copy the dbt project from git repository
-    if not is_test_run:
-        set_github_token_to_env()
-        copy_dbt_project(base_path)
+    # Copy the project from the source
+    if source == 'repo':
+        copy_from_repo(base_path)
+    elif source == 's3':
+        copy_from_s3()
+    else:
+        logger.info(f'No source parameter provided. Using the existing project at {base_path}')
 
     os.environ['DBT_PROJECT_DIR'] = base_path.__str__()
     logger.info(f'Using project dir: {os.environ["DBT_PROJECT_DIR"]}')
@@ -188,8 +196,7 @@ def run_single_threaded(
     logger.info(f'Using profiles dir: {os.environ["DBT_PROFILES_DIR"]}')
 
     # Set Snowflake credentials to environment variables
-    if not is_test_run:
-        set_snowflake_credentials_to_env()
+    set_snowflake_credentials_to_env()
 
     def log_event(event):
         info = event.info
