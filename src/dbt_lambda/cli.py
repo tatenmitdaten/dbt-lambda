@@ -16,11 +16,12 @@ from dbt_lambda.app import lambda_handler
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-logger.addHandler(logging.StreamHandler())
+# logger.addHandler(logging.StreamHandler())
 
 cli = typer.Typer(
     add_completion=False,
-    pretty_exceptions_enable=False
+    pretty_exceptions_enable=False,
+    no_args_is_help=True
 )
 
 
@@ -31,6 +32,16 @@ class Env(str, Enum):
     dev = 'dev'
     prod = 'prod'
 
+    def set(self):
+        os.environ['APP_ENV'] = self.value
+
+env_ann = Annotated[
+    Env, Option(
+        '--env', '-e',
+        help="target environment"
+    )
+]
+
 
 @cli.command()
 def cli_execute(
@@ -39,10 +50,12 @@ def cli_execute(
             help="source of dbt project",
             click_type=Choice(['s3', 'repo'])
         )] = 'repo',
-        env: Annotated[Env, Option(help="target environment")] = Env.dev,
+        env: env_ann = Env.dev,
         remote: Annotated[bool, Option(help="local or remote execution")] = False,
         test: Annotated[bool, Option(help="run quick test")] = False,
 ):
+    env.set()
+    args = args or []
     if len(args) == 1 and ' ' in args[0]:
         args = [a.strip("'") for a in re.findall(r"(?:[^\s']+|'[^']*')+", args[0])]
     if test:
@@ -70,7 +83,7 @@ def cli_execute(
         if 'SAM_CONFIG_FILE' not in os.environ:
             os.environ['SAM_CONFIG_FILE'] = 'src/samconfig.yaml'
         with TemporaryDirectory() as tmp_dir:
-            event['base_path'] = tmp_dir.__str__()
+            event['base_path'] = f'{tmp_dir}/dbt-project'
             print(event)
             result = lambda_handler(event, None)
 

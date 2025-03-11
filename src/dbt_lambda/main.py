@@ -1,19 +1,18 @@
 import json
-import multiprocessing.dummy
+import logging
+import multiprocessing.pool
 import os
 import queue
 import re
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
-import logging
 from pathlib import Path
 
 # we only import dbt.mp_context and mock dbt.mp_context._MP_CONTEXT before any other dbt imports
 import dbt.mp_context
 from dbt.artifacts.schemas.run import RunExecutionResult
 from dbt_common.events import EventLevel
-
 from dbt_lambda.docs import save_index_html
 from dbt_lambda.git import copy_from_repo
 from dbt_lambda.git import copy_from_s3
@@ -55,7 +54,7 @@ class CustomThreadPool:
         self.pool.shutdown(wait=True)
 
 
-multiprocessing.dummy.Pool = CustomThreadPool  # type: ignore
+multiprocessing.pool.ThreadPool = CustomThreadPool  # type: ignore
 
 
 class ThreadedContext:
@@ -163,17 +162,11 @@ def run_single_threaded(
     Returns:
         A RunnerResult object with the success flag and a list of NodeResult objects.
     """
-    import dbt.contracts.graph.manifest
-    import dbt.cli.requires
+    import dbt.graph.thread_pool
 
-    # Ensure that the threaded context is used everywhere
-    for obj in (
-            dbt.mp_context._MP_CONTEXT,
-            dbt.mp_context.get_mp_context(),
-            dbt.contracts.graph.manifest.get_mp_context(),
-            dbt.cli.requires.get_mp_context()
-    ):
-        assert isinstance(obj, ThreadedContext)
+    # Ensure that the threaded context and pook are set
+    assert isinstance(dbt.mp_context._MP_CONTEXT, ThreadedContext)
+    assert issubclass(dbt.graph.thread_pool.ThreadPool, CustomThreadPool)
 
     # Import dbt modules after the threaded context has been set
     from dbt.cli.main import dbtRunner, dbtRunnerResult
@@ -185,7 +178,7 @@ def run_single_threaded(
     if source == 'repo':
         copy_from_repo(base_path)
     elif source == 's3':
-        copy_from_s3()
+        copy_from_s3(base_path)
     else:
         logger.info(f'No source parameter provided. Using the existing project at {base_path}')
 
@@ -209,6 +202,7 @@ def run_single_threaded(
             logger.info(clean_msg)
 
     res: dbtRunnerResult = dbtRunner(callbacks=[log_event]).invoke(args + ['--log-level', 'none'])
+
     if res.exception:
         message = res.exception.__str__()
         raise RuntimeError(f'Failed to run {" ".join(args)}: {message}')
